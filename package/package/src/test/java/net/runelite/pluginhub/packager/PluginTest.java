@@ -38,6 +38,9 @@ import org.junit.Test;
 @Slf4j
 public class PluginTest
 {
+	private static final String VALID_REPOSITORY = "https://github.com/runelite/example-plugin.git";
+	private static final String VALID_COMMIT = "0000000000000000000000000000000000000000";
+
 	@Test
 	public void testInternalNameChecks() throws IOException, DisabledPluginException
 	{
@@ -59,7 +62,7 @@ public class PluginTest
 		try
 		{
 			newPlugin("test", "" +
-				"repository=https://github.com/runelite/example-plugin.git\n" +
+				"repository=" + VALID_REPOSITORY + "\n" +
 				"commit=2357276b");
 			Assert.fail();
 		}
@@ -68,6 +71,41 @@ public class PluginTest
 			log.info("ok: ", e);
 			assertContains(e.getHelpText(), "commit");
 		}
+	}
+
+	@Test
+	public void testCommitMustBePresent() throws DisabledPluginException, IOException
+	{
+		PluginBuildException e = assertNewPluginFails("test", "repository=" + VALID_REPOSITORY + "\n");
+		assertContains(e.getMessage(), "commit must be a full 40 character sha1sum");
+		assertContains(e.getHelpText(), "commit=null");
+	}
+
+	@Test
+	public void testRepositoryMustBePresent() throws DisabledPluginException, IOException
+	{
+		PluginBuildException e = assertNewPluginFails("test", "commit=" + VALID_COMMIT + "\n");
+		assertContains(e.getMessage(), "repository is missing");
+		assertContains(e.getHelpText(), "in file");
+	}
+
+	@Test
+	public void testRepositoryMustBeGithubCloneUrl() throws DisabledPluginException, IOException
+	{
+		PluginBuildException ssh = assertNewPluginFails("test", "" +
+			"repository=git@github.com:runelite/example-plugin.git\n" +
+			"commit=" + VALID_COMMIT + "\n");
+		assertContains(ssh.getHelpText(), "repositories must be https clone urls");
+
+		PluginBuildException wrongHost = assertNewPluginFails("test", "" +
+			"repository=https://gitlab.com/runelite/example-plugin.git\n" +
+			"commit=" + VALID_COMMIT + "\n");
+		assertContains(wrongHost.getHelpText(), "repositories must be hosted on GitHub.com");
+
+		PluginBuildException missingGitSuffix = assertNewPluginFails("test", "" +
+			"repository=https://github.com/runelite/example-plugin\n" +
+			"commit=" + VALID_COMMIT + "\n");
+		assertContains(missingGitSuffix.getHelpText(), "repository must be a clone url");
 	}
 
 	@Test
@@ -198,8 +236,8 @@ public class PluginTest
 	private static Plugin createExamplePlugin(String name, String packageName) throws DisabledPluginException, PluginBuildException, IOException, InterruptedException
 	{
 		Plugin p = newPlugin(name, "" +
-			"repository=https://github.com/runelite/example-plugin.git\n" +
-			"commit=0000000000000000000000000000000000000000");
+			"repository=" + VALID_REPOSITORY + "\n" +
+			"commit=" + VALID_COMMIT);
 
 		Assert.assertEquals(0, new ProcessBuilder(
 			new File("./create_new_plugin.py").getAbsolutePath(),
@@ -216,7 +254,21 @@ public class PluginTest
 		return p;
 	}
 
-	private void assertContains(String haystack, String needle)
+	private static PluginBuildException assertNewPluginFails(String name, String desc) throws DisabledPluginException, IOException
+	{
+		try (Plugin ignored = newPlugin(name, desc))
+		{
+			Assert.fail();
+			return null;
+		}
+		catch (PluginBuildException e)
+		{
+			log.info("ok: ", e);
+			return e;
+		}
+	}
+
+	private static void assertContains(String haystack, String needle)
 	{
 		Assert.assertTrue(haystack, haystack.contains(needle));
 	}
