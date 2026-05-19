@@ -54,6 +54,23 @@ public class PluginTest
 	}
 
 	@Test
+	public void testCommitIsRequired() throws DisabledPluginException, IOException
+	{
+		try
+		{
+			newPlugin("test", "" +
+				"repository=https://github.com/runelite/example-plugin.git\n");
+			Assert.fail();
+		}
+		catch (PluginBuildException e)
+		{
+			log.info("ok: ", e);
+			assertContains(e.getMessage(), "commit must be a full 40 character sha1sum");
+			assertContains(e.getHelpText(), "commit=null");
+		}
+	}
+
+	@Test
 	public void testCommitMustBeComplete() throws DisabledPluginException, IOException
 	{
 		try

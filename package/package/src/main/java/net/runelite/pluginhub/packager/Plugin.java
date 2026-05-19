@@ -248,7 +248,7 @@ public class Plugin implements Closeable
 		}
 
 		commit = (String) cd.remove("commit");
-		if (!COMMIT_TEST.matcher(commit).matches())
+		if (commit == null || !COMMIT_TEST.matcher(commit).matches())
 		{
 			throw PluginBuildException.of(internalName, "commit must be a full 40 character sha1sum")
 				.withFileLine(pluginCommitDescriptor, "commit=" + commit);
