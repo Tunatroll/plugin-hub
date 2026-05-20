@@ -29,6 +29,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Properties;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.pluginhub.uploader.Util;
@@ -67,6 +69,27 @@ public class PluginTest
 		{
 			log.info("ok: ", e);
 			assertContains(e.getHelpText(), "commit");
+		}
+	}
+
+	@Test
+	public void testAllPluginDescriptorsParse() throws IOException, PluginBuildException
+	{
+		File[] descriptors = new File("plugins").listFiles(File::isFile);
+		Assert.assertNotNull(descriptors);
+		Assert.assertTrue(descriptors.length > 0);
+		Arrays.sort(descriptors, Comparator.comparing(File::getName));
+
+		for (File descriptor : descriptors)
+		{
+			try (Plugin ignored = new Plugin(descriptor))
+			{
+				// Constructor validation is enough; building each plugin is covered by the packager flow.
+			}
+			catch (DisabledPluginException ignored)
+			{
+				// Disabled and unavailable descriptors are intentionally short-circuited by the packager.
+			}
 		}
 	}
 
