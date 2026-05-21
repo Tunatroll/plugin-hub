@@ -28,6 +28,8 @@ import com.google.common.io.Files;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +78,28 @@ public class PluginTest
 		try (Plugin p = createExamplePlugin("example"))
 		{
 			p.build(Util.readRLVersion(), true);
+		}
+	}
+
+	@Test
+	public void testWarningIsIncludedInDisplayData() throws Throwable
+	{
+		String warning = "This plugin submits your IP address to a 3rd-party server.";
+		try (Plugin p = newPlugin("warning", "" +
+			"repository=https://github.com/runelite/example-plugin.git\n" +
+			"commit=0000000000000000000000000000000000000000\n" +
+			"warning=" + warning))
+		{
+			try
+			{
+				assembleDisplayData(p);
+				Assert.fail();
+			}
+			catch (IOException e)
+			{
+				assertContains(e.getMessage(), "chunk.properties");
+			}
+			Assert.assertEquals(warning, p.getDisplayData().getWarning());
 		}
 	}
 
@@ -219,5 +243,19 @@ public class PluginTest
 	private void assertContains(String haystack, String needle)
 	{
 		Assert.assertTrue(haystack, haystack.contains(needle));
+	}
+
+	private static void assembleDisplayData(Plugin plugin) throws Throwable
+	{
+		Method method = Plugin.class.getDeclaredMethod("assembleDisplayData", boolean.class);
+		method.setAccessible(true);
+		try
+		{
+			method.invoke(plugin, true);
+		}
+		catch (InvocationTargetException e)
+		{
+			throw e.getCause();
+		}
 	}
 }
