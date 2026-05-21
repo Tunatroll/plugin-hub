@@ -80,6 +80,17 @@ public class PluginTest
 	}
 
 	@Test
+	public void testWarningIsIncludedInDisplayData() throws DisabledPluginException, PluginBuildException, IOException, InterruptedException
+	{
+		String warning = "This plugin submits your IP address to a 3rd-party server.";
+		try (Plugin p = createExamplePluginWithWarning("warning", warning))
+		{
+			p.build(Util.readRLVersion(), true);
+			Assert.assertEquals(warning, p.getDisplayData().getWarning());
+		}
+	}
+
+	@Test
 	public void testMissingPlugin() throws DisabledPluginException, PluginBuildException, IOException, InterruptedException
 	{
 		try (Plugin p = createExamplePlugin("missing-plugin"))
@@ -195,11 +206,22 @@ public class PluginTest
 		return createExamplePlugin(name, "com.example");
 	}
 
+	private static Plugin createExamplePluginWithWarning(String name, String warning) throws DisabledPluginException, PluginBuildException, IOException, InterruptedException
+	{
+		return createExamplePlugin(name, "com.example", warning);
+	}
+
 	private static Plugin createExamplePlugin(String name, String packageName) throws DisabledPluginException, PluginBuildException, IOException, InterruptedException
+	{
+		return createExamplePlugin(name, packageName, null);
+	}
+
+	private static Plugin createExamplePlugin(String name, String packageName, String warning) throws DisabledPluginException, PluginBuildException, IOException, InterruptedException
 	{
 		Plugin p = newPlugin(name, "" +
 			"repository=https://github.com/runelite/example-plugin.git\n" +
-			"commit=0000000000000000000000000000000000000000");
+			"commit=0000000000000000000000000000000000000000\n" +
+			(warning == null ? "" : "warning=" + warning));
 
 		Assert.assertEquals(0, new ProcessBuilder(
 			new File("./create_new_plugin.py").getAbsolutePath(),
