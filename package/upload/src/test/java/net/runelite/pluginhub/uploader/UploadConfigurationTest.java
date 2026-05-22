@@ -62,4 +62,30 @@ public class UploadConfigurationTest
 		RecordedRequest r2 = server.takeRequest();
 		Assert.assertEquals("Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==", r2.getHeader("Authorization"));
 	}
+
+	@Test
+	public void mkdirsCreatesMissingParentBeforeRetryingChild() throws IOException, InterruptedException
+	{
+		MockWebServer server = new MockWebServer();
+
+		server.enqueue(new MockResponse().setResponseCode(409));
+		server.enqueue(new MockResponse().setResponseCode(201));
+		server.enqueue(new MockResponse().setResponseCode(201));
+
+		UploadConfiguration uploadConfiguration = new UploadConfiguration()
+			.setClient("Aladdin:open sesame");
+
+		uploadConfiguration.mkdirs(server.url("/plugins/example"));
+
+		RecordedRequest childAttempt = server.takeRequest();
+		RecordedRequest parentAttempt = server.takeRequest();
+		RecordedRequest childRetry = server.takeRequest();
+
+		Assert.assertEquals("MKCOL", childAttempt.getMethod());
+		Assert.assertEquals("MKCOL", parentAttempt.getMethod());
+		Assert.assertEquals("MKCOL", childRetry.getMethod());
+		Assert.assertEquals("/plugins/example/%2F", childAttempt.getPath());
+		Assert.assertEquals("/plugins/%2F", parentAttempt.getPath());
+		Assert.assertEquals("/plugins/example/%2F", childRetry.getPath());
+	}
 }
