@@ -71,6 +71,75 @@ public class PluginTest
 	}
 
 	@Test
+	public void testRepositoryMustBeGithubCloneUrl() throws DisabledPluginException, IOException
+	{
+		try
+		{
+			newPlugin("test", "" +
+				"repository=https://gitlab.com/runelite/example-plugin.git\n" +
+				"commit=0000000000000000000000000000000000000000");
+			Assert.fail();
+		}
+		catch (PluginBuildException e)
+		{
+			log.info("ok: ", e);
+			assertContains(e.getMessage(), "repository is not an accepted url");
+			assertContains(e.getHelpText(), "repositories must be hosted on GitHub.com");
+		}
+	}
+
+	@Test
+	public void testUnexpectedCommitDescriptorKeyFailsFast() throws DisabledPluginException, IOException
+	{
+		try
+		{
+			newPlugin("test", "" +
+				"repository=https://github.com/runelite/example-plugin.git\n" +
+				"commit=0000000000000000000000000000000000000000\n" +
+				"commmit=0000000000000000000000000000000000000000");
+			Assert.fail();
+		}
+		catch (PluginBuildException e)
+		{
+			log.info("ok: ", e);
+			assertContains(e.getMessage(), "unexpected key in commit descriptor");
+			assertContains(e.getHelpText(), "commmit=0000000000000000000000000000000000000000");
+		}
+	}
+
+	@Test
+	public void testDisabledCommitDescriptorIsExcludedFromUnavailable() throws PluginBuildException, IOException
+	{
+		try
+		{
+			newPlugin("disabled-plugin", "disabled=legacy plugin is broken");
+			Assert.fail();
+		}
+		catch (DisabledPluginException e)
+		{
+			Assert.assertEquals("disabled-plugin", e.getInternalName());
+			Assert.assertEquals("legacy plugin is broken", e.getReason());
+			Assert.assertFalse(e.isIncludeInUnavailable());
+		}
+	}
+
+	@Test
+	public void testUnavailableCommitDescriptorIsIncludedInUnavailable() throws PluginBuildException, IOException
+	{
+		try
+		{
+			newPlugin("unavailable-plugin", "unavailable=requires unsupported upstream API");
+			Assert.fail();
+		}
+		catch (DisabledPluginException e)
+		{
+			Assert.assertEquals("unavailable-plugin", e.getInternalName());
+			Assert.assertEquals("requires unsupported upstream API", e.getReason());
+			Assert.assertTrue(e.isIncludeInUnavailable());
+		}
+	}
+
+	@Test
 	public void testExamplePluginCompiles() throws DisabledPluginException, PluginBuildException, IOException, InterruptedException
 	{
 		try (Plugin p = createExamplePlugin("example"))
