@@ -71,6 +71,21 @@ public class PluginTest
 	}
 
 	@Test
+	public void testCommitMustBePresent() throws DisabledPluginException, IOException
+	{
+		try
+		{
+			newPlugin("test", "repository=https://github.com/runelite/example-plugin.git\n");
+			Assert.fail();
+		}
+		catch (PluginBuildException e)
+		{
+			log.info("ok: ", e);
+			assertContains(e.getMessage(), "commit");
+		}
+	}
+
+	@Test
 	public void testExamplePluginCompiles() throws DisabledPluginException, PluginBuildException, IOException, InterruptedException
 	{
 		try (Plugin p = createExamplePlugin("example"))
